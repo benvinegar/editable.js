@@ -1,10 +1,21 @@
 <html>
     <head>
-        <link rel="stylesheet" href="../lib/qunit/qunit.css" />
+        <link rel="stylesheet" href="qunit/qunit.css" />
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
-        <script src="../lib/qunit/qunit.js"></script>
-        <script src="tests.js"></script>
+        <script src="qunit/qunit.js"></script>
     </head>
     <body>
+
+        <h1 id="qunit-header">Test Suite</h1>
+        <h2 id="qunit-banner"></h2>
+        <div id="qunit-testrunner-toolbar"></div>
+        <h2 id="qunit-userAgent"></h2>
+        <ol id="qunit-tests"></ol>
+        <div id="qunit-fixture">
+            <div id="content" contentEditable="true"></div>
+        </div>
+
+        <script src="../src/editable.js"></script>
+        <script src="test.js"></script>
     </body>
 </html>
