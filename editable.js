@@ -1,3 +1,4 @@
+/*jshint browser:true, white:true, undef:true, strict:true */
 /**
  * editable.js - a xbrowser library for contentEditable
  *
@@ -5,7 +6,8 @@
  *
  * MIT License
  */
-(function(window, undefined) {
+(function (window, undefined) {
+    "use strict";
     var document   = window.document,
         userAgent  = navigator.userAgent,
         isWebkit   = ~userAgent.indexOf('AppleWebKit/'),
@@ -28,10 +30,12 @@
      * Helper function to recursively aggregate all text from a set
      * of HTML nodes
      */
-    function getTextHelper(nodes, ignoreBreaks) {
+    function getTextHelper(nodes, ignoreBreaks, nodeCallback) {
         var text = '',
+            blocks = [],
             name,
             node,
+            tmp,
             i;
 
         for (i = 0; i < nodes.length; ++i) {
@@ -40,44 +44,46 @@
 
             // html node
             if (node.nodeType == 1) {
+                tmp = nodeCallback && nodeCallback(node);
                 // the last node, we don't want trailing newlines
-                if (i == nodes.length - 1)
-                    text += getTextHelper(node.childNodes, true);
+                if (tmp) {
+                    text += tmp;
                 // a breaking node, we don't want to add breaks to any of the children
-                else if (!ignoreBreaks && breakingElems.hasOwnProperty(name))
-                    text += getTextHelper(node.childNodes, true) + '\n';
-                // text node, concatenate text
-                else
-                    text += getTextHelper(node.childNodes);
+                } else if (!ignoreBreaks && breakingElems.hasOwnProperty(name)) {
+                    //if (text.length)
+                    blocks.push(text);
+                    text = getTextHelper(node.childNodes, true, nodeCallback);
+                } else {
+                    // regular text
+                    text += getTextHelper(node.childNodes, false, nodeCallback);
+                }
             }
             // text node
             else if (node.nodeType == 3) {
                 // ignore garbage newline TextNodes
                 if (isGecko && i === 0 && /^\n$/.test(node.nodeValue))
                     continue;
-                text += node.nodeValue;
-            }
-            // something else, ignore
-            else {
-                continue;
+                text += normalizeSpace(node.nodeValue);
             }
         }
-        return text;
+        console.dir(blocks);
+        blocks.push(text);
+        return blocks.join("\n");
     }
 
-    function Editable(elem) {
+    var Editable = function (elem) {
         if (!elem || !elem.contentEditable)
             throw 'First argument must be contentEditable';
 
         this.elem = elem;
-    }
+    };
 
     Editable.prototype = {
 
         /**
          * helper function for inserting random html
          */
-        insertHTML: function(html) {
+        insertHTML: function (html) {
             if (document.all) {
                 var range = document.selection.createRange();
                 range.pasteHTML(html);
@@ -93,7 +99,7 @@
          */
         // TODO make this function private and have the public version
         // only return textNodes for the wrapped textArea
-        getTextNodes: function(nodeList) {
+        getTextNodes: function (nodeList) {
             var elem = this.elem;
 
             // special case a single node by massaging into a list of nodes
@@ -112,14 +118,14 @@
                     continue; // HACK to avoid erroring on whitespace nodes
 
                 switch (node.nodeType) {
-                    case 1:
-                        textNodes = textNodes.concat(this.getTextNodes(node.childNodes));
-                        break;
-                    case 3:
-                        // HACK don't count garbage FF nodes
-                        if (!/^\n\s+/.test(node.nodeValue))
+                case 1:
+                    textNodes = textNodes.concat(this.getTextNodes(node.childNodes));
+                    break;
+                case 3:
+                    // HACK don't count garbage FF nodes
+                    if (!/^\n\s+/.test(node.nodeValue))
                         textNodes.push(node);
-                        break;
+                    break;
                 }
             }
             return textNodes;
@@ -128,58 +134,32 @@
         /**
          * Get unformatted text
          */
-        text: function(callback) {
+        text: function (nodeCallback) {
             var elem = this.elem,
                 text = '',
                 index = 0,
-                nodes;
+                nodes,
+                node,
+                i;
 
             // massage the NodeList into an Array of HTMLElements
             try {
                 nodes = Array.prototype.slice.call(elem.childNodes);
             } catch (e) {
                 nodes = [];
-                for (var i = 0; i < elem.childNodes.length; ++i)
+                for (i = 0; i < elem.childNodes.length; ++i)
                     nodes.push(elem.childNodes[i]);
             }
 
-            // KLUDGE: WebKit doesn't have a breaking (<br>) element
-            // following/surrounding the very first TextNode, so we have to
-            // special case the first line. If there a multiple nodes, grab
-            // all text nodes until you hit the first block level element,
-            // and glue a newline to the end of the text string.
-            if (isWebkit && nodes.length && nodes[0].nodeType == 3) {
-                var additionalNodes = false;
-                for (var j = 0; j < nodes.length; ++j) {
-                    index = j;
-                    // text node
-                    if (nodes[j].nodeType == 3)
-                        text += nodes[j].nodeValue;
-                    // html node
-                    else if (nodes[j].nodeType == 1 && !breakingElems.hasOwnProperty(nodes[j].nodeName.toLowerCase()))
-                        text += getTextHelper(nodes[j].childNodes);
-                    else {
-                        additionalNodes = true;
-                        break;
-                    }
-                }
-                // only add a newline if we have subsequent block-level
-                // elements
-                if (index && additionalNodes)
-                    text += '\n' + getTextHelper(nodes.slice(index));
-            }
-            else {
-                text += getTextHelper(nodes);
-            }
-
-            return callback ? callback(text) : text;
+            return getTextHelper(nodes, false, nodeCallback);
         },
 
         /**
          * Get currently selected text node in
          * the contentEditable element.
          */
-        selectedTextNode: function() {
+        selectedTextNode: function () {
+            var elem = this.elem;
             var sel,
             range;
 
@@ -242,7 +222,7 @@
         /**
          * Get relative offset in the currently active text node
          */
-        selectedTextNodeOffset: function(node) {
+        selectedTextNodeOffset: function (node) {
             var range, newOffset;
 
             // Webkit/Firefox
@@ -284,7 +264,8 @@
         /**
          * Select some text in the contentEditable div
          */
-        selectNodeText: function(node, start, end) {
+        selectNodeText: function (node, start, end) {
+            var elem = this.elem;
             var sel, range;
 
             // Webkit/Firefox
@@ -346,6 +327,8 @@
             }
         }
     };
+
+    Editable.normalizeSpace = normalizeSpace;
 
     // assign to the current window
     window.Editable = Editable;
