@@ -9,18 +9,15 @@
 (function (window, undefined) {
     "use strict";
     var document   = window.document,
-        userAgent  = navigator.userAgent,
-        isWebkit   = ~userAgent.indexOf('AppleWebKit/'),
-        isGecko    = ~userAgent.indexOf('Gecko/'),
-        character  = character,
+        character  = 'character',
         nbspRe     = new RegExp(String.fromCharCode(160), 'gi'),
-        blockElems = 'h1 h2 h3 h4 h5 h6 p pre blockquote address ul ol dir menu li dl div center form hr br'.split(' '),
-        breakingElems = {},
+        blockElemList = 'h1 h2 h3 h4 h5 h6 p pre blockquote address ul ol dir menu li dl div center form'.split(' '),
+        blockElems = {},
         i          = 0;
         
     // build a list of block level elements
-    for (i = 0; i < blockElems.length; i++)
-        breakingElems[blockElems[i]] = true;
+    for (i = 0; i < blockElemList.length; i++)
+        blockElems[blockElemList[i]] = true;
 
     function normalizeSpace(str) {
         return str.replace(nbspRe, ' ');
@@ -30,7 +27,7 @@
      * Helper function to recursively aggregate all text from a set
      * of HTML nodes
      */
-    function getTextHelper(nodes, ignoreBreaks, nodeCallback) {
+    function getTextHelper(nodes, ignoreBlockElems, nodeCallback) {
         var text = '',
             blocks = [],
             name,
@@ -42,31 +39,30 @@
             node = nodes[i];
             name = node.nodeName.toLowerCase();
 
-            // html node
-            if (node.nodeType == 1) {
+            if (node.nodeType == 1) { // html node
                 tmp = nodeCallback && nodeCallback(node);
-                // the last node, we don't want trailing newlines
+
                 if (tmp) {
                     text += tmp;
-                // a breaking node, we don't want to add breaks to any of the children
-                } else if (!ignoreBreaks && breakingElems.hasOwnProperty(name)) {
-                    //if (text.length)
-                    blocks.push(text);
+                } else if (!ignoreBlockElems && blockElems.hasOwnProperty(name)) {
+                    // Inside a block-level element, ignore any subsequent block-level
+                    // elements (i.e. nested divs or paragraphs)
+                    if (text)
+                        blocks.push(text);
                     text = getTextHelper(node.childNodes, true, nodeCallback);
+                } else if (name === 'br') {
+                    // Always convert breaking tags to newlines
+                    text += "\n";
                 } else {
-                    // regular text
-                    text += getTextHelper(node.childNodes, false, nodeCallback);
+                    // Some other (inline) element; recur inside to extract text
+                    text += getTextHelper(node.childNodes, ignoreBlockElems, nodeCallback);
                 }
             }
-            // text node
-            else if (node.nodeType == 3) {
-                // ignore garbage newline TextNodes
-                if (isGecko && i === 0 && /^\n$/.test(node.nodeValue))
-                    continue;
+            else if (node.nodeType == 3) { // text node
                 text += normalizeSpace(node.nodeValue);
             }
         }
-        console.dir(blocks);
+        // Block elements get two newlines (i.e. paragraphs)
         blocks.push(text);
         return blocks.join("\n");
     }
@@ -136,10 +132,8 @@
          */
         text: function (nodeCallback) {
             var elem = this.elem,
-                text = '',
-                index = 0,
+                out,
                 nodes,
-                node,
                 i;
 
             // massage the NodeList into an Array of HTMLElements
@@ -150,8 +144,8 @@
                 for (i = 0; i < elem.childNodes.length; ++i)
                     nodes.push(elem.childNodes[i]);
             }
-
-            return getTextHelper(nodes, false, nodeCallback);
+            out = getTextHelper(nodes, false, nodeCallback);
+            return out.replace(/\n$/, "");
         },
 
         /**

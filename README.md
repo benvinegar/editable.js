@@ -8,7 +8,7 @@ The Problem
 
 Each browser treats user input into contentEditable elements differently.
 
-Sample input:
+Sample input (typed by user):
 
 ```html
 one
@@ -16,29 +16,56 @@ two
 three
 ```
 
-Output in *Chrome*:
+Becomes the following when read back using ```innerHTML```:
+<table>
+  <tr>
+    <th>Browser</th><th>Shift-return output</th><th>Return output</th>
+  </tr>
 
-```html
-one
-<div>two</div>
-<div>three</div>
-```
+  <tr>
+    <td>WebKit</td>
+    <td>
+        <pre><code>one&lt;br&gt;
+two&lt;br&gt;
+three</code></pre>
+    </td>
+    <td>
+        <pre><code>one
+&lt;div&gt;two&lt;/div&gt;
+&lt;div&gt;three&lt;/div&gt;</code></pre>
+    </td>
+  </tr>
 
-*Firefox*:
+  <tr>
+    <td>Firefox</td>
+    <td>
+        <pre><code>one&lt;br&gt;
+two&lt;br&gt;
+three&lt;br&gt;</code></pre>
+    </td>
+    <td>
+        <pre><code>one&lt;br&gt;
+two&lt;br&gt;
+three&lt;br&gt;</code></pre>
+    </td>
+  </tr>
 
-```html
-one<br/>
-two<br/>
-three<br/>
-```
+  <tr>
+    <td>Internet Explorer</td>
+    <td>
+        <pre><code>&lt;p&gt;one&lt;br&gt;
+two&lt;br&gt;
+three&lt;/p&gt;</code></pre>
+    </td>
+    <td>
+        <pre><code>&lt;p&gt;one&lt;/p&gt;
+&lt;p&gt;two&lt;/p&gt;
+&lt;p&gt;three&lt;/p&gt;</code></pre>
+    </td>
+  </tr>
 
-*Internet Explorer 9*:
+</table>
 
-```html
-<p>one<br/>
-two<br/>
-three</p>
-```
 
 editable.js tries to smooth over these inconsistencies when accessing contentEditable text.
 
@@ -48,7 +75,7 @@ Usage
 ```javascript
 var editable = new Editable(elem);
 
-var text = editable.getText();
+var text = editable.text();
 ```
 
 See source code for more.

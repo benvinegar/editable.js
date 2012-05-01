@@ -5,7 +5,6 @@ var config = {
     }
 };
 
-
 module('text', config);
 
 test('no formatting', function () {
@@ -29,31 +28,77 @@ test("ignore user-inputted tags", function () {
     equal(this.content.text(), '<div>hi there</div>');
 });
 
-test('breaking tags', function () {
-    this.elem.html('hi<br>there');
-    equal(this.content.text(), "hi\nthere");
+test('webkit', function () {
+    // Input:
+    //   one
+    //   two
+    //   three
+    //
+    // Shift-returned:
+    //   one<br>
+    //   two<br>
+    //   three
 
-    this.elem.html('hi<br>there<br>');
-    equal(this.content.text(), "hi\nthere\n");
+    // Returned:
+    //   one
+    //   <div>two</div>
+    //   <div>three</div>
 
-    this.elem.html('hi<br>there<br><br>');
-    equal(this.content.text(), "hi\nthere\n\n");
+    this.elem.html('one<br>two<br>three');
+    equal(this.content.text(), "one\ntwo\nthree");
+
+    this.elem.html('one<div>two</div><div>three</div>');
+    equal(this.content.text(), "one\ntwo\nthree");
+
 });
 
-test('block elements', function () {
-    this.elem.html('hi<div>there</div>');
-    equal(this.content.text(), "hi\nthere");
+test('firefox/gecko', function () {
+    // Input:
+    //   one
+    //   two
+    //   three
+    //
+    // Always becomes:
+    //   one<br>
+    //   two<br>
+    //   three<br> <- Firefox always generates extra br (need to reject this)
 
-    this.elem.html('<div>hi there</div>');
-    equal(this.content.text(), "\nhi there");
+    this.elem.html('one<br>two<br>');
+    equal(this.content.text(), "one\ntwo");
 
-    this.elem.html('<div>hi</div> <div>there</div>');
-    equal(this.content.text(), "\nhi \nthere");
+    this.elem.html('one<br>two<br>three<br>');
+    equal(this.content.text(), "one\ntwo\nthree");
 
-    // trailing div is a trailing newline
-    this.elem.html('<div>hi</div> <div>there</div><div></div>');
-    equal(this.content.text(), "\nhi \nthere\n");
+    this.elem.html('one<br>two<br>three<br><br>');
+    equal(this.content.text(), "one\ntwo\nthree\n");
 });
+
+test('internet explorer', function () {
+    // Input:
+    //   one
+    //   two
+    //   three
+    //
+    // Shift-returned:
+    //   <p>
+    //     one<br>
+    //     two<br>
+    //     three
+    //   </p>
+    //
+    // Returned:
+    //
+    // <p>one</p>
+    // <p>two</p>
+    // <p>three</p>
+
+    this.elem.html('<p>one<br>two<br>three</p>');
+    equal(this.content.text(), "one\ntwo\nthree");
+
+    this.elem.html('<p>one</p><p>two</p><p>three</p>');
+    equal(this.content.text(), "one\ntwo\nthree");
+});
+
 
 test('nested block elements', function () {
     // want a single newline for multiple nested block elements
