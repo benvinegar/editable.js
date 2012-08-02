@@ -5,6 +5,18 @@ var config = {
     }
 };
 
+module('set', config);
+
+test('newlines', function () {
+    this.content.set('one\ntwo\nthree');
+    equal(this.elem.html(), 'one<br>two<br>three');
+});
+
+test('html', function () {
+    this.content.set('&one<br>two<br>three');
+    equal(this.elem.html(), '&amp;one&lt;br&gt;two&lt;br&gt;three');
+});
+
 module('text', config);
 
 test('no formatting', function () {

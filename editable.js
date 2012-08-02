@@ -23,6 +23,13 @@
         return str.replace(nbspRe, ' ');
     }
 
+    function escapeTags(str) {
+        return String(str)
+            .replace('/&/g', '&amp;')
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+    }
+
     /**
      * Helper function to recursively aggregate all text from a set
      * of HTML nodes
@@ -125,6 +132,13 @@
                 }
             }
             return textNodes;
+        },
+
+        set: function (str) {
+            var elem = this.elem;
+
+            str = escapeTags(str).replace(/\n/g, "<br>");
+            elem.innerHTML = str;
         },
 
         /**
