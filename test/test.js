@@ -181,3 +181,16 @@ test('get offset', function () {
     this.content.selectNodeText(textNode, 2, 4);
     equal(this.content.selectedTextNodeOffset(), 2);
 });
+
+module('removeNode', config);
+
+test('basic', function () {
+    // TODO: Check the cursor has moved
+    this.elem.html('hi <span>there</span>');
+    var span = this.elem.find('span')[0];
+
+    this.content.removeNode(span);
+
+    equal(this.elem.html(), 'hi ');
+    // TODO: Check the cursor has moved
+});

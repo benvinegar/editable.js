@@ -163,6 +163,39 @@
         },
 
         /**
+         * Removes the given node, and move the cursor position
+         * to where the node was removed (if possible)
+         *
+         * TODO: Does this belong in this library? Should probably
+         *       be separate.
+         */
+        removeNode: function (node) {
+            var prev, sel, range;
+
+            // WebKit / Firefox
+            if (window.getSelection) {
+                // Deleting the node that contains the range means there
+                // are no more ranges in the Selection object. In which case,
+                // we set the range on the previous node in order to maintain
+                // document focus.
+                prev = node.previousSibling;
+                node.parentNode.removeChild(node);
+                sel = window.getSelection();
+                range = document.createRange();
+                if (prev) {
+                    range.setStart(prev, prev.length);
+                    range.setEnd(prev, prev.length);
+                }
+                sel.addRange(range);
+            }
+            // IE
+            else {
+                // TODO use selection code
+                node.parentNode.removeChild(node);
+            }
+        },
+
+        /**
          * Get currently selected text node in
          * the contentEditable element.
          */
